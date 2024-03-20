@@ -1,11 +1,11 @@
 import {
   Children,
   Dispatch,
+  ReactElement,
   ReactNode,
   SetStateAction,
   cloneElement,
   createContext,
-  createElement,
   useContext,
   useEffect,
   useState,
@@ -69,7 +69,7 @@ const StepperProvider = ({ currentStep, children }: StepperProviderType) => {
   );
 };
 
-type StepperType = {
+type TStepper = {
   children: JSX.Element[];
   currentStep: number;
   setApi: Dispatch<SetStateAction<StepperContextType | undefined>>;
@@ -80,7 +80,7 @@ export const Stepper = ({
   currentStep,
   setApi,
   ...rest
-}: StepperType) => {
+}: TStepper) => {
   return (
     <StepperProvider currentStep={currentStep}>
       <StepperWrapper setApi={setApi} {...rest}>
@@ -90,7 +90,7 @@ export const Stepper = ({
   );
 };
 
-type StepperWrapperType = {
+type TStepperWrapper = {
   children: JSX.Element[];
   setApi: Dispatch<SetStateAction<StepperContextType | undefined>>;
 };
@@ -99,7 +99,7 @@ export const StepperWrapper = ({
   children,
   setApi,
   ...rest
-}: StepperWrapperType) => {
+}: TStepperWrapper) => {
   const context = useContext(StepperContext);
   const subComponentList = Object.keys(Stepper);
   const subComponents = subComponentList.map((key) => {
@@ -110,17 +110,17 @@ export const StepperWrapper = ({
 
   useEffect(() => {
     setApi(context);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return <div {...rest}>{subComponents.map((component) => component)}</div>;
 };
 
-type StepperIndicatorListType = {
-  className?: string;
-  children: JSX.Element[];
+type TStepperIndicatorList = React.HTMLProps<HTMLDivElement> & {
+  children: ReactElement[];
 };
 
-const Indicators = ({ children, ...rest }: StepperIndicatorListType) => {
+const Indicators = ({ children, ...rest }: TStepperIndicatorList) => {
   return (
     <div {...rest}>
       {Children.map(children, (child, index) => {
@@ -130,33 +130,43 @@ const Indicators = ({ children, ...rest }: StepperIndicatorListType) => {
   );
 };
 
-type StepperIndicatorType = {
-  children: (({ activeStep }: { activeStep: number }) => ReactNode) | ReactNode;
+type TStepperIndicator = {
+  children:
+    | (({
+        activeStep,
+        onClick,
+      }: {
+        activeStep: number;
+        onClick: () => void;
+      }) => ReactNode)
+    | ReactNode;
   index?: number;
 };
 
-export const Indicator = ({
-  children,
-  index,
-  ...rest
-}: StepperIndicatorType) => {
+export const Indicator = ({ children, index }: TStepperIndicator) => {
   const { activeStep, moveTo } = useContext(StepperContext);
-  const handleIndicatorClick = () => {
+  const onClick = () => {
     if (index !== undefined) {
       moveTo(index);
     }
   };
   return (
-    <div onClick={handleIndicatorClick} {...rest}>
-      {typeof children === "function" ? children({ activeStep }) : children}
-    </div>
+    <>
+      {typeof children === "function"
+        ? children({ activeStep, onClick })
+        : children}
+    </>
+    // <div onClick={handleIndicatorClick} {...rest}>
+
+    // </div>
   );
 };
 
-type StepListType = {
+type TStepList = React.HTMLProps<HTMLDivElement> & {
   children: JSX.Element[];
 };
-export const StepList = ({ children, ...rest }: StepListType) => {
+
+export const StepList = ({ children, ...rest }: TStepList) => {
   const { activeStep, setItemsCount } = useContext(StepperContext);
 
   useEffect(() => {
@@ -172,31 +182,32 @@ export const StepList = ({ children, ...rest }: StepListType) => {
   );
 };
 
-type StepType = {
+type TStep = {
   children: ReactNode;
   isActive?: boolean;
 };
 
-const Step = ({ children, isActive }: StepType) => {
+const Step = ({ children, isActive }: TStep) => {
   if (!isActive) {
     return null;
   }
   return children;
 };
 
-type ActionsType = {
+type TActions = {
   children: ReactNode;
-};
+} & React.HTMLProps<HTMLDivElement>;
 
-const Actions = ({ children, ...rest }: ActionsType) => {
+const Actions = ({ children, ...rest }: TActions) => {
   return <div {...rest}>{children}</div>;
 };
 
-type PreviousType = {
-  children: ReactNode;
-  as?: "button" | "div";
-};
-const Previous = ({ children, as, ...rest }: PreviousType) => {
+type TAction = {
+  children: ReactElement;
+  onClick?: () => void;
+} & React.HTMLProps<HTMLButtonElement>;
+
+const Previous = ({ children, onClick, ...rest }: TAction) => {
   const { activeStep, movePrev } = useContext(StepperContext);
   const handleClick = () => {
     movePrev();
@@ -204,44 +215,35 @@ const Previous = ({ children, as, ...rest }: PreviousType) => {
   if (activeStep === 0) {
     return null;
   }
-  const element = as ? as : "button";
-  return createElement(element, { onClick: handleClick, ...rest }, children);
+
+  return cloneElement(children, {
+    onClick: onClick ? onClick : handleClick,
+    ...rest,
+  });
 };
 
-type NextType = {
-  children: ReactNode;
-  as?: "button" | "div";
-  onClick?: () => void;
-};
-const Next = ({ children, as, onClick, ...rest }: NextType) => {
+const Next = ({ children, onClick, ...rest }: TAction) => {
   const { activeStep, itemsCount, moveNext } = useContext(StepperContext);
   const handleClick = () => {
-    if (onClick) {
-      onClick();
-      return;
-    }
     moveNext();
   };
   if (activeStep >= itemsCount - 1) {
     return null;
   }
-  const element = as ? as : "button";
-  return createElement(element, { onClick: handleClick, ...rest }, children);
+  return cloneElement(children, {
+    onClick: onClick ? onClick : handleClick,
+    ...rest,
+  });
 };
-
-type LastType = {
-  onClick: () => void;
-  children: ReactNode;
-  as?: "button" | "div";
-};
-
-const Last = ({ children, as, onClick, ...rest }: LastType) => {
+const Last = ({ children, onClick, ...rest }: TAction) => {
   const { activeStep, itemsCount } = useContext(StepperContext);
   if (activeStep !== itemsCount - 1) {
     return null;
   }
-  const element = as ? as : "button";
-  return createElement(element, { onClick, ...rest }, children);
+  return cloneElement(children, {
+    onClick: onClick,
+    ...rest,
+  });
 };
 
 Stepper.Indicators = Indicators;
