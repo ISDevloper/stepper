@@ -62,12 +62,14 @@ function App() {
         </Stepper.Step>
       </Stepper.StepList>
       <Stepper.Actions>
-        <Stepper.Previous as="button">Previous</Stepper.Previous>
-        <Stepper.Next onClick={handleNext} as="button">
-          Next
+        <Stepper.Previous>
+          <button>previous</button>
+        </Stepper.Previous>
+        <Stepper.Next>
+          <button>next</button>
         </Stepper.Next>
         <Stepper.Last as="button" onClick={handleClick}>
-          Last
+          <button>last</button>
         </Stepper.Last>
       </Stepper.Actions>
     </Stepper>
